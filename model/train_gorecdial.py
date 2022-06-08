@@ -38,6 +38,7 @@ parser.add_argument("--lr",type=float,default=1e-3)
 parser.add_argument("--weight_decay",type=float,default=0.01)
 parser.add_argument("--eval_batch",type=int,default=500)
 parser.add_argument("--word_net",action='store_true')
+parser.add_argument("--add_movie_reviews",action='store_true')
 
 t_args = parser.parse_args()
 
@@ -61,8 +62,7 @@ bow_data=gorecdial_bow[0]
 
 train_loader=DataLoader(gorecdial_train,batch_size=10,shuffle=True)
 test_loader=DataLoader(gorecdial_test,batch_size=10,shuffle=False)
-
-
+movie_embed_lookup=torch.load("/gscratch/h2lab/xiaonb/CRwalker/CR-Walker/data/tensor.pt")
 add_generic_args(dataset='gorecdial')
 
 
@@ -70,7 +70,7 @@ add_generic_args(dataset='gorecdial')
 
 
 if option=="train":
-    prorec=ProRec(device_str=device_str,graph_embed_size=t_args.graph_embed_size,utter_embed_size=t_args.utter_embed_size,dataset="gorecdial",word_net=t_args.word_net)
+    prorec=ProRec(device_str=device_str,graph_embed_size=t_args.graph_embed_size,utter_embed_size=t_args.utter_embed_size,dataset="gorecdial",word_net=t_args.word_net,movie_embed = movie_embed_lookup,add_movie_reviews=t_args.add_movie_reviews)
     if t_args.restore_best:
         print("restoring from best checkpoint...")
         state_dict=torch.load(save_path)
@@ -182,7 +182,7 @@ elif option=="test":
 
     for key in state_dict.keys():
         print(key)
-    prorec=ProRec(device_str=device_str,graph_embed_size=t_args.graph_embed_size,utter_embed_size=t_args.utter_embed_size,dataset="gorecdial")
+    prorec=ProRec(device_str=device_str,graph_embed_size=t_args.graph_embed_size,utter_embed_size=t_args.utter_embed_size,dataset="gorecdial",movie_embed=movie_embed_lookup,add_movie_reviews =t_args.add_movie_reviews)
     prorec.load_state_dict(state_dict,strict=False)
     prorec.eval()
     prorec.to(device)
@@ -195,7 +195,7 @@ elif option=="test_gen":
 
     for key in state_dict.keys():
         print(key)
-    prorec=ProRec(device_str=device_str,graph_embed_size=t_args.graph_embed_size,utter_embed_size=t_args.utter_embed_size,negative_sample_ratio=t_args.negative_sample_ratio,word_net=t_args.word_net,dataset="gorecdial")
+    prorec=ProRec(device_str=device_str,graph_embed_size=t_args.graph_embed_size,utter_embed_size=t_args.utter_embed_size,negative_sample_ratio=t_args.negative_sample_ratio,word_net=t_args.word_net,dataset="gorecdial",movie_embed=movie_embed_lookup,add_movie_reviews=t_args.add_movie_reviews)
     prorec.load_state_dict(state_dict,strict=False)
     prorec.eval()
     prorec.to(device)

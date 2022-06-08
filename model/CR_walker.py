@@ -9,11 +9,12 @@ from graph_embedder import Graph_Embedder
 from intent_selector import IntentSelector
 from graph_walker import Graph_Walker
 from explicit_recommender import Explicit_Recommender
-
+import torch.nn.functional as F
 
 class ProRec(nn.Module):
     #beta=tanh(QW+KU)*V
-    def __init__(self,device_str='cuda:1',rnn_type="RNN_TANH",use_bert=True,utter_embed_size=64,dropout=0.5,num_turns=10,num_relations=12,num_bases=15,graph_embed_size=64,atten_hidden=20,negative_sample_ratio=5,dataset="redial",word_net=False):
+    def __init__(self,device_str='cuda:1',rnn_type="RNN_TANH",use_bert=True,utter_embed_size=64,dropout=0.5,num_turns=10,num_relations=12,num_bases=15,graph_embed_size=64,atten_hidden=20,negative_sample_ratio=5,dataset="redial",word_net=False,
+            movie_embed=None,add_movie_reviews=False):
         super(ProRec,self).__init__()
         self.dataset=dataset
         if dataset=="redial":
@@ -37,8 +38,9 @@ class ProRec(nn.Module):
         self.num_bases=num_bases
         self.graph_embed_size=graph_embed_size
         self.atten_hidden=atten_hidden
-        
-
+        self.movie_embed = F.pad(movie_embed, pad=(0, 0, 0, 19308 - movie_embed.shape[0])).to(device_str)
+        self.add_movie_reviews = add_movie_reviews
+        self.linear_transform = torch.nn.Linear(768+128, 128)
         self.device=torch.device(device_str)
         self.negative_sample_ratio=negative_sample_ratio
 
@@ -67,7 +69,6 @@ class ProRec(nn.Module):
     def forward_pretrain(self,tokenized_dialog,all_length,maxlen,init_hidden,edge_type,edge_index,alignment_index,alignment_batch_index,alignment_label,intent_label,alignment_index_word=None,alignment_batch_index_word=None,alignment_label_word=None):
         
         utter_embed=self.utter_embedder.forward(tokenized_dialog,all_length,maxlen,init_hidden)
-        #last_utter=utter_embed[:,-1,:]
         #print(last_utter)
         intent=self.intent_selector.forward(utter_embed)
         #print(alignment_index)
@@ -342,6 +343,11 @@ class ProRec(nn.Module):
         utter_embed=self.utter_embedder.forward(tokenized_dialog,all_length,maxlen,init_hidden)
         #print("utterance_embedding:",utter_embed.size())
         graph_embed,word_embed=self.graph_embedder.forward(edge_type,edge_index)
+        if self.add_movie_reviews:
+            graph_embed = torch.cat((self.movie_embed,graph_embed),1)
+            graph_embed = self.linear_transform(graph_embed)
+        #print("graph_embed",graph_embed)
+        #graph_embed torch.Size([19308, 128]) +[19308, 768]=[19308, (768+128)] =linear=> (19308, 128)
         intent=self.intent_selector.forward(utter_embed)
         #print("graph_embedding:",graph_embed.size())
         #,graph_embeddings,mention_history,self.get_group_index(cur_type,"Candidate"),self.get_group_index(cur_type,"Attr"),graph_size)
@@ -391,7 +397,9 @@ class ProRec(nn.Module):
         utter_embed=self.utter_embedder.forward(tokenized_dialog,all_length,maxlen,init_hidden)
         #print("utterance_embedding:",utter_embed.size())
         graph_embed,word_embed=self.graph_embedder.forward(edge_type,edge_index)
-
+        if self.add_movie_reviews:
+            graph_embed = torch.cat((self.movie_embed,graph_embed),1)
+            graph_embed = self.linear_transform(graph_embed)
         user_portrait=self.graph_walker.get_user_portrait(mention_index,mention_batch_index,graph_embed,word_index,word_batch_index,word_embed)
 
         step,weight,partial_score=self.graph_walker.forward_single_layer(layer,utter_embed,user_portrait,graph_embed,sel_index,sel_batch_index,sel_group_index,grp_batch_index,last_index,intent,score_mask,last_weights,True)
@@ -505,6 +513,3 @@ class ProRec(nn.Module):
             cur=map(int,indices[group_name])
             group_index.append(cur)
         return group_index
-
-
-        

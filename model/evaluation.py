@@ -676,7 +676,7 @@ def evaluate_gen_gorecdial(test_loader:DataLoader, model:ProRec, graph_data, bow
                     selected_2=select_layer_2(step2,grp_index_2.cpu().numpy(),grp_bat_index_2.cpu().numpy(),intent_index_2.cpu().numpy(),node_candidate2,cur_batch_size,args)
                 else:
                     selected_2=[[[]]]
-            
+            #multihop
             for i in range(len(selected_1)):
                 for j in range(len(selected_1[i])):
                     selected_1[i][j]=int(selected_1[i][j])
