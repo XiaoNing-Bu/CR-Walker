@@ -39,6 +39,7 @@ parser.add_argument("--weight_decay",type=float,default=0.01)
 parser.add_argument("--eval_batch",type=int,default=500)
 parser.add_argument("--word_net",action='store_true')
 parser.add_argument("--add_movie_reviews",action='store_true')
+parser.add_argument("--movie_review_embed_file",type=str)
 
 t_args = parser.parse_args()
 
@@ -62,7 +63,8 @@ bow_data=gorecdial_bow[0]
 
 train_loader=DataLoader(gorecdial_train,batch_size=10,shuffle=True)
 test_loader=DataLoader(gorecdial_test,batch_size=10,shuffle=False)
-movie_embed_lookup=torch.load("/gscratch/h2lab/xiaonb/CRwalker/CR-Walker/data/tensor.pt")
+if t_args.add_movie_reviews:
+    movie_embed_lookup=torch.load(t_args.movie_review_embed_file)
 add_generic_args(dataset='gorecdial')
 
 
