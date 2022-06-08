@@ -73,6 +73,9 @@ class ProRec(nn.Module):
         intent=self.intent_selector.forward(utter_embed)
         #print(alignment_index)
         graph_embed,word_embed=self.graph_embedder.forward(edge_type,edge_index)
+        if self.add_movie_reviews:
+            graph_embed = torch.cat((self.movie_embed,graph_embed),1)
+            graph_embed = self.linear_transform(graph_embed)
         graph_features=graph_embed.index_select(0,alignment_index)
         
         tiled_utter=self.graph_walker.tile_context(utter_embed,alignment_batch_index)
